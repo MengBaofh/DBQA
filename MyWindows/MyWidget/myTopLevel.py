@@ -125,23 +125,30 @@ class ParaMulSelectTop(Toplevel):
     vars = []  # stringVar对象列表
     varCount = 0
 
-    def __init__(self, master, title: str, headings, availSelections, **kw):
+    def __init__(self, master, title: str, headings, availSelections, label: str, **kw):
         super().__init__(master, kw)
         self.master = master
         self.balloon = Balloon(self.master)
         self.myTitle = title
         self.headings = headings  # 下拉框表头，[第一个下拉框表头, 第二个下拉框表头, 第三个下拉框表头]
         self.availSelections = availSelections  # 下拉框可选项，[[第一个下拉框], [第二个下拉框], [第三个下拉框]]
+        self.label = label
+        if self.label == 'where':  # where? having? orderBy?
+            self.target = self.master.master.where
+        elif self.label == 'having':
+            self.target = self.master.master.having
+        elif self.label == 'orderBy':
+            self.target = self.master.master.orderBy
         self.columnNum = len(self.headings)
         self.scale = self.columnNum / 3
         self.rescale = 3 / self.columnNum
-        if self.master.master.where:
+        if self.target:
             self.updateVars()
         self.setParaMulSelectTop()
         self.setInputFrame()
 
     def updateVars(self):
-        for index, item in enumerate(self.master.master.where):
+        for index, item in enumerate(self.target):
             for i in range(self.columnNum):
                 self.vars[index * self.columnNum + i] = StringVar()
                 self.vars[index * self.columnNum + i].set(item.split()[i])
@@ -171,7 +178,7 @@ class ParaMulSelectTop(Toplevel):
         self.frame.bind('<Configure>', self.on_configure)
         self.canvas.create_window((0, 0), window=self.frame, anchor='nw')  # 将frame放到画布中
         self.canvas.place(relx=0.03, rely=0.1, relheight=0.35, relwidth=0.93)
-        if self.master.master.where:
+        if self.target:
             for i in range(self.varCount // self.columnNum):
                 for j in range(self.columnNum):
                     print(self.varCount)
@@ -197,7 +204,7 @@ class ParaMulSelectTop(Toplevel):
         if self.varCount > 0:
             for i in range(self.columnNum):
                 if self.vars[-(i + 1)].get() == '':
-                    showwarning('DBQA', '请先补全上一条where条件！')
+                    showwarning('DBQA', '请先补全上一条查询条件！')
                     return
         for i in range(self.columnNum):
             myVar = StringVar()
@@ -218,18 +225,24 @@ class ParaMulSelectTop(Toplevel):
         if self.varCount > 0:
             for i in range(self.columnNum):
                 if self.vars[-(i + 1)].get() == '':
-                    showwarning('DBQA', '检测到输入的where条件不全！')
+                    showwarning('DBQA', '检测到输入的查询条件不全！')
                     return
-        eachWhere = ''
-        where = []
+        each = ''
+        targets = []
         for i in range(self.varCount):
             myStr = self.vars[i].get()
-            eachWhere += myStr
-            eachWhere += ' '
+            each += myStr
+            each += ' '
             if not (i + 1) % self.columnNum:
-                where.append(eachWhere)
-                eachWhere = ''
-        self.master.master.where = where[:]
+                targets.append(each)
+                each = ''
+        # self.target = targets[:]
+        if self.label == 'where':
+            self.master.master.where = targets[:]
+        elif self.label == 'having':
+            self.master.master.having = targets[:]
+        elif self.label == 'orderBy':
+            self.master.master.orderBy = targets[:]
         self.destroy()
 
 
@@ -289,8 +302,12 @@ class ParaOutputByTreeViewTop(Toplevel):
                command=lambda: self.buttonFunc(self, self.result, self.column) if self.buttonFunc else None). \
             place(relx=0.3, rely=0.85, relheight=0.1, relwidth=0.4)
 
-    def getTreeView(self):
-        return self.treeview
+    def getTreeViewSelection(self):
+        """
+        获取选择项字段组合字符串
+        :return: 'field1, field2, ...'
+        """
+        return pm.getAnyTreeViewSelection(self.treeview)
 
 
 class AnalyseTopLevel(Toplevel):
@@ -372,7 +389,6 @@ class AnalyseTopLevel(Toplevel):
             return
         selectedCols = self.paraSelectTreeView.getMySelection().split(', ')
         pm.lineChart(self.df[selectedCols], selectedCols)
-
 
 # if __name__ == '__main__':
 #     root = Tk()

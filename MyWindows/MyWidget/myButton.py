@@ -90,7 +90,13 @@ class SearchButton(CustomButton):
     paraSelectTreeView = None
     outputTreeViewTopLevel = None
     addWhereButton = None
+    addOrderByButton = None
+    addHavingButton = None
+    addGroupByButton = None
     where = []  # where语句列表(构造where语句:myWhere = ' AND '.join(where))
+    groupBy = ''  # groupBy语句
+    having = []
+    orderBy = []
 
     def __init__(self, master):
         self.selectTable = None
@@ -124,9 +130,18 @@ class SearchButton(CustomButton):
         # 设置条件控制按钮
         self.addWhereButton = AddWhereButton(super().getTopLevel()[1], self.selectTable, self.column_names,
                                              self.paraSelectTreeView)
-        self.addWhereButton.place(relx=0.1, rely=0.6, relheight=0.1, relwidth=0.3)
+        self.addGroupByButton = AddGroupByButton(super().getTopLevel()[1], self.selectTable, self.column_names,
+                                                 self.paraSelectTreeView)
+        self.addHavingButton = AddHavingButton(super().getTopLevel()[1], self.selectTable, self.column_names,
+                                               self.paraSelectTreeView)
+        self.addOrderByButton = AddOrderByButton(super().getTopLevel()[1], self.selectTable, self.column_names,
+                                                 self.paraSelectTreeView)
+        self.addWhereButton.place(relx=0.1, rely=0.55, relheight=0.1, relwidth=0.3)
+        self.addGroupByButton.place(relx=0.6, rely=0.55, relheight=0.1, relwidth=0.3)
+        self.addHavingButton.place(relx=0.1, rely=0.7, relheight=0.1, relwidth=0.3)
+        self.addOrderByButton.place(relx=0.6, rely=0.7, relheight=0.1, relwidth=0.3)
         Button(super().getTopLevel()[1], text='确定', command=self.popupResultTreeViewTop). \
-            place(relx=0.3, rely=0.8, relheight=0.1, relwidth=0.4)
+            place(relx=0.3, rely=0.85, relheight=0.1, relwidth=0.4)
 
     def popupResultTreeViewTop(self):
         # 以treeview的形式输出结果
@@ -134,6 +149,14 @@ class SearchButton(CustomButton):
         if self.where:
             myWhere = ' AND '.join(self.where)
             sql += f' WHERE {myWhere}'
+        if self.groupBy:
+            sql += f' GROUP BY {self.groupBy}'
+        if self.having:
+            myHaving = ' AND '.join(self.having)
+            sql += f' HAVING {myHaving}'
+        if self.orderBy:
+            orderBy = ', '.join(self.orderBy)
+            sql += f' ORDER BY {orderBy}'
         try:
             result, resultDescription = pm.search(self.selectDataBase, sql)
         except ProgrammingError:
@@ -157,9 +180,61 @@ class AddWhereButton(Button):
 
     def __init__(self, master, table, selections, treeView):
         super().__init__(master)
-        self['text'] = 'where'
+        self['text'] = '+where'
         self['command'] = lambda: ParaMulSelectTop(master,
                                                    f'SELECT {treeView.getMySelection()} FROM {table} WHERE ',
                                                    ['值1', '条件', '值2'],
                                                    [selections, self.baseOperators,
-                                                    ['可自定义(若为字符串需用""括起来)'] + selections])
+                                                    ['可自定义(若为字符串需用""括起来)'] + selections], 'where')
+
+
+class AddGroupByButton(Button):
+    """
+    添加groupBy条件按钮
+    """
+
+    def __init__(self, master, table, selections, treeView):
+        super().__init__(master)
+        self['text'] = '+groupBy'
+        self['command'] = lambda: ParaOutputByTreeViewTop(f'SELECT {treeView.getMySelection()} FROM {table} GROUP BY ',
+                                                          selections, ['选择groupBy的字段：'], '确定', self.saveGroupBy,
+                                                          master)
+
+    def saveGroupBy(self, paraOutputByTreeViewTop, *kw):
+        self.master.master.groupBy = paraOutputByTreeViewTop.getTreeViewSelection()
+        paraOutputByTreeViewTop.destroy()
+
+
+class AddHavingButton(Button):
+    """
+    添加having条件按钮
+    """
+    baseOperators = ['>', '>=', '<', '<=', '=', '<>',
+                     'LIKE', 'NOT LIKE',
+                     'IS NULL', 'IS NOT NULL',
+                     'BETWEEN', 'NOT BETWEEN',
+                     'IN', 'NOT IN']
+
+    def __init__(self, master, table, selections, treeView):
+        super().__init__(master)
+        self['text'] = '+having'
+        self['command'] = lambda: ParaMulSelectTop(master,
+                                                   f'SELECT {treeView.getMySelection()} FROM {table} HAVING ',
+                                                   ['值1', '条件', '值2'],
+                                                   [selections, self.baseOperators,
+                                                    ['可自定义(若为字符串需用""括起来)'] + selections], 'having')
+
+
+class AddOrderByButton(Button):
+    """
+    添加orderBy条件按钮
+    """
+    baseOperators = ['ASC', 'DESC']
+
+    def __init__(self, master, table, selections, treeView):
+        super().__init__(master)
+        self['text'] = '+orderBy'
+        self['command'] = lambda: ParaMulSelectTop(master,
+                                                   f'SELECT {treeView.getMySelection()} FROM {table} ORDER BY ',
+                                                   ['排序字段', '排序方式'],
+                                                   [selections, self.baseOperators], 'orderBy')

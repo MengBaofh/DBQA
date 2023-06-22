@@ -77,6 +77,16 @@ class PublicMember:
         return self.treeViewSelections
 
     @staticmethod
+    def getAnyTreeViewSelection(treeview):
+        """
+        获取选择项字段组合字符串
+        :return: 'field1, field2, ...'
+        """
+        strList = [treeview.item(selection, option='values')[0] for selection in treeview.selection()]
+        myStr = ', '.join(strList)
+        return myStr
+
+    @staticmethod
     def search(dataBase, sql: str):
         """
         数据库查询

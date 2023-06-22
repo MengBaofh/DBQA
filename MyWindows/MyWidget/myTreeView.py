@@ -130,6 +130,4 @@ class ParaSelectTreeView(Treeview):
         获取选择项字段组合字符串
         :return: 'field1, field2, ...'
         """
-        strList = [self.item(selection, option='values')[0] for selection in self.selection()]
-        myStr = ', '.join(strList)
-        return myStr
+        return pm.getAnyTreeViewSelection(self)
